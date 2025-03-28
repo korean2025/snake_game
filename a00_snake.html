@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스네이크 게임</title>
+    <style>
+      body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+}
+
+canvas {
+    border: 2px solid #000;
+    background-color: #eee;
+    margin-top: 20px;
+}
+    </style>
+</head>
+<body>
+    <h1>스네이크 게임</h1>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <script>
+    const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 그리드 크기
+const gridSize = 20;
+let snake = [{ x: 5, y: 5 }]; // 스네이크 초기 위치
+let food = { x: 8, y: 8 }; // 초기 음식 위치
+let direction = 'RIGHT'; // 초기 방향
+let gameOver = false;
+
+// 터치 이벤트 변수
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+// 게임 루프
+function gameLoop() {
+    if (gameOver) return;
+
+    moveSnake();
+    if (checkCollision()) {
+        gameOver = true;
+        alert("게임 오버!");
+        return;
+    }
+
+    if (checkFoodCollision()) {
+        growSnake();
+        generateFood();
+    }
+
+    clearCanvas();
+    drawSnake();
+    drawFood();
+    setTimeout(gameLoop, 100);
+}
+
+// 스네이크 이동
+function moveSnake() {
+    const head = { ...snake[0] };
+    switch (direction) {
+        case 'LEFT': head.x--; break;
+        case 'RIGHT': head.x++; break;
+        case 'UP': head.y--; break;
+        case 'DOWN': head.y++; break;
+    }
+    snake.unshift(head);
+    snake.pop();
+}
+
+// 충돌 체크 (벽 또는 자기 몸에 부딪히면 게임 오버)
+function checkCollision() {
+    const head = snake[0];
+    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) return true;
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) return true;
+    }
+    return false;
+}
+
+// 음식 먹은 여부 체크
+function checkFoodCollision() {
+    const head = snake[0];
+    return head.x === food.x && head.y === food.y;
+}
+
+// 스네이크 길이 늘리기
+function growSnake() {
+    const tail = { ...snake[snake.length - 1] };
+    snake.push(tail);
+}
+
+// 새로운 음식 생성
+function generateFood() {
+    food = {
+        x: Math.floor(Math.random() * canvas.width / gridSize),
+        y: Math.floor(Math.random() * canvas.height / gridSize),
+    };
+}
+
+// 캔버스 지우기
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// 스네이크 그리기
+function drawSnake() {
+    snake.forEach(segment => {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+    });
+}
+
+// 음식 그리기
+function drawFood() {
+    ctx.fillStyle = 'red';
+    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+}
+
+// 방향 변경 (키보드 이벤트)
+function changeDirection(event) {
+    if (event.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+    if (event.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+    if (event.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+    if (event.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+}
+
+// 마우스 클릭 이벤트로 방향 변경 (마우스 이벤트)
+function handleMouseMove(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    const snakeHead = snake[0];
+
+    if (mouseX < snakeHead.x * gridSize && direction !== 'RIGHT') {
+        direction = 'LEFT';
+    } else if (mouseX > snakeHead.x * gridSize && direction !== 'LEFT') {
+        direction = 'RIGHT';
+    } else if (mouseY < snakeHead.y * gridSize && direction !== 'DOWN') {
+        direction = 'UP';
+    } else if (mouseY > snakeHead.y * gridSize && direction !== 'UP') {
+        direction = 'DOWN';
+    }
+}
+
+// 터치 이벤트 처리 (모바일에서 방향 변경)
+function handleTouchStart(event) {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+}
+
+function handleTouchEnd(event) {
+    touchEndX = event.changedTouches[0].clientX;
+    touchEndY = event.changedTouches[0].clientY;
+
+    let dx = touchEndX - touchStartX;
+    let dy = touchEndY - touchStartY;
+
+    // 수평 이동 감지
+    if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0 && direction !== 'LEFT') {
+            direction = 'RIGHT';
+        } else if (dx < 0 && direction !== 'RIGHT') {
+            direction = 'LEFT';
+        }
+    }
+    // 수직 이동 감지
+    else {
+        if (dy > 0 && direction !== 'UP') {
+            direction = 'DOWN';
+        } else if (dy < 0 && direction !== 'DOWN') {
+            direction = 'UP';
+        }
+    }
+}
+
+// 이벤트 리스너 추가
+
+// 키보드 이벤트 리스너
+document.addEventListener('keydown', changeDirection);
+
+// 마우스 이벤트 리스너
+canvas.addEventListener('mousemove', handleMouseMove);
+
+// 터치 이벤트 리스너
+canvas.addEventListener('touchstart', handleTouchStart);
+canvas.addEventListener('touchend', handleTouchEnd);
+
+// 게임 루프 시작
+gameLoop();
+    </script>
+</body>
+</html>
